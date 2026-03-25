@@ -16,3 +16,4 @@
 ## A faire
 - Portage CUDA (GPU)
 - Version hybride CPU+GPU
+
