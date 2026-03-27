@@ -1,8 +1,8 @@
-#ifndef RT_CAMERA_H
-#define RT_CAMERA_H
+#ifndef RT_SCENE_CAMERA_CUH
+#define RT_SCENE_CAMERA_CUH
 
-#include "vec3.h"
-#include "ray.h"
+#include "math/vec3.cuh"
+#include "math/ray.cuh"
 
 class Camera {
 public:
@@ -44,4 +44,4 @@ private:
     Point3 defocus_disk_sample() const;
 };
 
-#endif // RT_CAMERA_H
+#endif // RT_SCENE_CAMERA_CUH

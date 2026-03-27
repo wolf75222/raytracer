@@ -1,5 +1,5 @@
-#include "core/camera.h"
-#include "core/random_utils.h"
+#include "scene/camera.cuh"
+#include "math/random.cuh"
 #include <cmath>
 #include <algorithm>
 

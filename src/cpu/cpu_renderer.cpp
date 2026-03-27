@@ -1,11 +1,9 @@
 #include "cpu/cpu_renderer.h"
-#include "core/random_utils.h"
-#include "core/interval.h"
-#include "core/material.h"
-#include "core/lambertian.h"
-#include "core/metal.h"
-#include "core/dielectric.h"
-#include "core/bvh.h"
+#include "math/random.cuh"
+#include "math/interval.cuh"
+#include "scene/material.cuh"
+#include "scene/primitives.cuh"
+#include "scene/bvh_builder.h"
 #include <iostream>
 #include <limits>
 #include <thread>
@@ -65,8 +63,11 @@ static inline bool scatter_inline(const Material* mat, const Ray& r_in,
         scattered = Ray(rec.p, direction);
         return true;
     }
+    case Material::Type::Checker: {
+        // Devirtualise comme Lambertian mais avec couleur alternee
+        return mat->scatter(r_in, rec, attenuation, scattered);
+    }
     default:
-        // Fallback to virtual dispatch for unknown types
         return mat->scatter(r_in, rec, attenuation, scattered);
     }
 }
@@ -210,6 +211,12 @@ Color CpuRenderer::ray_color(const Ray& r, const Hittable& world, int depth) con
         const Material* mat = rec.material;
         if (!mat) break;
 
+        // Area light : si emissif, retourner la lumiere emise
+        if (mat->type() == Material::Type::Emissive) {
+            const auto* em = static_cast<const Emissive*>(mat);
+            return throughput * em->emitted();
+        }
+
         Ray scattered;
         Color attenuation;
         if (!scatter_inline(mat, current_ray, rec, attenuation, scattered))
@@ -217,8 +224,19 @@ Color CpuRenderer::ray_color(const Ray& r, const Hittable& world, int depth) con
 
         // CS:APP 5.6: Multiply throughput components directly
         throughput = throughput * attenuation;
+
+        // Early termination + Russian Roulette (RTIOW CUDA article Opt#4+5)
+        double max_comp = std::fmax(throughput.x(), std::fmax(throughput.y(), throughput.z()));
+        if (max_comp < 0.001)
+            break;
+        if (d > 3) {
+            if (random_double() > max_comp)
+                break;
+            throughput = throughput / max_comp;
+        }
+
         current_ray = scattered;
     }
 
-    return Color(0, 0, 0); // max depth reached
+    return Color(0, 0, 0);
 }

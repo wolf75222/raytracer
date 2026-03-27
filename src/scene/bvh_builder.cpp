@@ -1,5 +1,5 @@
-#include "core/bvh.h"
-#include "core/hittable_list.h"
+#include "scene/bvh_builder.h"
+#include "scene/primitives.cuh"
 #include <algorithm>
 #include <limits>
 

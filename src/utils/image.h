@@ -1,7 +1,7 @@
-#ifndef RT_IMAGE_H
-#define RT_IMAGE_H
+#ifndef RT_UTILS_IMAGE_H
+#define RT_UTILS_IMAGE_H
 
-#include "vec3.h"
+#include "math/vec3.cuh"
 #include <vector>
 #include <string>
 #include <ostream>
@@ -20,6 +20,9 @@ public:
     void write_ppm(std::ostream& out) const;
     void write_ppm(const std::string& filename) const;
 
+    // Write PPM P6 (binary) format - plus compact, plus rapide
+    void write_ppm_binary(const std::string& filename) const;
+
 private:
     int width_;
     int height_;
@@ -31,4 +34,4 @@ private:
     static int to_byte(double linear);
 };
 
-#endif // RT_IMAGE_H
+#endif // RT_UTILS_IMAGE_H

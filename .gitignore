@@ -19,3 +19,13 @@ output/*.png
 # OS
 Thumbs.db
 .DS_Store
+resources/
+output/*.nsys-rep
+output/*.sqlite
+EPICS.md
+ETAT_DES_LIEUX.md
+run_ncu.bat
+enable_ncu.bat
+output/*.csv
+RAPPORT.md
+rapport/

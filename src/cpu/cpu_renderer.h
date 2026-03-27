@@ -1,8 +1,8 @@
 #ifndef RT_CPU_RENDERER_H
 #define RT_CPU_RENDERER_H
 
-#include "core/scene.h"
-#include "core/image.h"
+#include "scene/scene.h"
+#include "utils/image.h"
 #include <memory>
 
 class Hittable;
@@ -20,6 +20,9 @@ public:
     // Enable BVH acceleration (builds BVH from scene)
     void enable_bvh();
 
+    // Render a single tile (used by hybrid renderer)
+    void render_tile(int x0, int y0, int x1, int y1) const;
+
 private:
     const Scene& scene_;
     ImageBuffer& image_;
@@ -28,7 +31,6 @@ private:
 
     const Hittable& get_world() const;
     Color ray_color(const Ray& r, const Hittable& world, int depth) const;
-    void render_tile(int x0, int y0, int x1, int y1) const;
 };
 
 #endif // RT_CPU_RENDERER_H
