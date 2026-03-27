@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "core/vec3.h"
-#include "core/interval.h"
+#include "math/vec3.cuh"
+#include "math/interval.cuh"
 
 TEST(Interval, DefaultIsEmpty) {
     Interval i;

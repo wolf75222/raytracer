@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
-#include "core/lambertian.h"
-#include "core/metal.h"
-#include "core/dielectric.h"
-#include "core/hit_record.h"
+#include "scene/material.cuh"
+#include "scene/primitives.cuh"
 #include <cmath>
 
 constexpr double EPS = 1e-6;

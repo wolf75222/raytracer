@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "core/plane.h"
-#include "core/lambertian.h"
-#include "core/interval.h"
+#include "scene/primitives.cuh"
+#include "scene/material.cuh"
+#include "math/interval.cuh"
 #include <cmath>
 
 constexpr double EPS = 1e-6;

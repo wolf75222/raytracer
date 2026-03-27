@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/camera.h"
+#include "scene/camera.cuh"
 #include <cmath>
 
 constexpr double EPS = 1e-4;

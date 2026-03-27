@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
-#include "core/bvh.h"
-#include "core/hittable_list.h"
-#include "core/sphere.h"
-#include "core/lambertian.h"
-#include "core/interval.h"
+#include "scene/bvh_builder.h"
+#include "scene/primitives.cuh"
+#include "scene/material.cuh"
+#include "math/interval.cuh"
 #include <cmath>
 
 constexpr double EPS = 1e-6;

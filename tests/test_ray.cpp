@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/ray.h"
+#include "math/ray.cuh"
 
 constexpr double EPS = 1e-10;
 

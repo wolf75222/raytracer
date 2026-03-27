@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
-#include "core/scene.h"
-#include "core/image.h"
+#include "scene/scene.h"
+#include "utils/image.h"
 #include "cpu/cpu_renderer.h"
-#include "core/sphere.h"
-#include "core/lambertian.h"
+#include "scene/primitives.cuh"
+#include "scene/material.cuh"
 
 TEST(CpuRenderer, RenderSkyOnly) {
     Scene scene;

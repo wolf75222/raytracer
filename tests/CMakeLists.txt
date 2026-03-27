@@ -30,8 +30,26 @@ add_raytracer_test(test_materials test_materials.cpp)
 add_raytracer_test(test_camera test_camera.cpp)
 add_raytracer_test(test_scene test_scene.cpp)
 add_raytracer_test(test_bvh test_bvh.cpp)
+add_raytracer_test(test_aabb test_aabb.cpp)
+add_raytracer_test(test_random test_random.cpp)
+add_raytracer_test(test_triangle test_triangle.cpp)
+add_raytracer_test(test_cylinder test_cylinder.cpp)
 
 # CPU renderer test needs the cpu lib
 add_executable(test_cpu_renderer test_cpu_renderer.cpp)
 target_link_libraries(test_cpu_renderer PRIVATE raytracer_cpu GTest::gtest_main)
 add_test(NAME test_cpu_renderer COMMAND test_cpu_renderer)
+
+# GPU renderer test
+if(ENABLE_CUDA)
+    add_executable(test_gpu_renderer test_gpu_renderer.cpp)
+    target_link_libraries(test_gpu_renderer PRIVATE raytracer_cpu raytracer_gpu GTest::gtest_main)
+    target_compile_definitions(test_gpu_renderer PRIVATE RT_CUDA_ENABLED)
+    add_test(NAME test_gpu_renderer COMMAND test_gpu_renderer)
+
+    # Hybrid renderer test
+    add_executable(test_hybrid_renderer test_hybrid_renderer.cpp)
+    target_link_libraries(test_hybrid_renderer PRIVATE raytracer_cpu raytracer_gpu raytracer_hybrid GTest::gtest_main)
+    target_compile_definitions(test_hybrid_renderer PRIVATE RT_CUDA_ENABLED)
+    add_test(NAME test_hybrid_renderer COMMAND test_hybrid_renderer)
+endif()

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "core/vec3.h"
-#include "core/random_utils.h"
+#include "math/vec3.cuh"
+#include "math/random.cuh"
 #include <cmath>
 
 constexpr double EPS = 1e-10;
@@ -156,6 +156,57 @@ TEST(Vec3, NearZero) {
 
     Vec3 big(0.1, 0, 0);
     EXPECT_FALSE(big.near_zero());
+}
+
+// Edge cases
+TEST(Vec3, ZeroVector) {
+    Vec3 v;
+    EXPECT_DOUBLE_EQ(v.length(), 0.0);
+    EXPECT_DOUBLE_EQ(v.length_squared(), 0.0);
+    EXPECT_TRUE(v.near_zero());
+}
+
+TEST(Vec3, ReflectPerpendicular) {
+    // Rayon droit sur une surface -> reflechit dans l'autre sens
+    Vec3 v(0, -1, 0);
+    Vec3 n(0, 1, 0);
+    Vec3 r = reflect(v, n);
+    EXPECT_NEAR(r.x(), 0.0, EPS);
+    EXPECT_NEAR(r.y(), 1.0, EPS);
+}
+
+TEST(Vec3, RefractSnellAngle) {
+    // Snell: sin(theta_t) = (n1/n2) * sin(theta_i)
+    // 45 degrees into glass (n=1.5): sin(theta_t) = sin(45)/1.5
+    Vec3 v = unit_vector(Vec3(1, -1, 0));
+    Vec3 n(0, 1, 0);
+    Vec3 r = refract(v, n, 1.0 / 1.5);
+    // Le rayon refracte doit etre plus vertical que l'incident
+    EXPECT_LT(std::fabs(r.x()), std::fabs(v.x()));
+    EXPECT_NEAR(r.length(), 1.0, 1e-6);
+}
+
+TEST(Vec3, CrossProductOrthogonal) {
+    Vec3 a(2, 3, 4), b(5, 6, 7);
+    Vec3 c = cross(a, b);
+    EXPECT_NEAR(dot(c, a), 0.0, EPS);
+    EXPECT_NEAR(dot(c, b), 0.0, EPS);
+}
+
+TEST(Vec3, DivisionByScalar) {
+    Vec3 v(6, 9, 12);
+    Vec3 r = v / 3.0;
+    EXPECT_NEAR(r.x(), 2.0, EPS);
+    EXPECT_NEAR(r.y(), 3.0, EPS);
+    EXPECT_NEAR(r.z(), 4.0, EPS);
+}
+
+TEST(Vec3, MinusEquals) {
+    Vec3 v(5, 7, 9);
+    v -= Vec3(1, 2, 3);
+    EXPECT_NEAR(v.x(), 4.0, EPS);
+    EXPECT_NEAR(v.y(), 5.0, EPS);
+    EXPECT_NEAR(v.z(), 6.0, EPS);
 }
 
 TEST(RandomUtils, RandomDoubleRange) {

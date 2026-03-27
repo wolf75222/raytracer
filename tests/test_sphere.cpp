@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "core/sphere.h"
-#include "core/lambertian.h"
-#include "core/interval.h"
+#include "scene/primitives.cuh"
+#include "scene/material.cuh"
+#include "math/interval.cuh"
 #include <cmath>
 #include <limits>
 
