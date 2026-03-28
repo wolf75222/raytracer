@@ -1,5 +1,7 @@
 # Raytracer CPU / GPU / Hybride
 
+![galaxy](output/galaxy.png)
+
 Path tracer en C++ et CUDA. Rendu progressif temps réel avec SDL3.
 
 ## Build

@@ -5,6 +5,7 @@ cmake-build-*/
 # Output images
 output/*.ppm
 output/*.png
+!output/galaxy.png
 
 # IDE
 .vscode/
