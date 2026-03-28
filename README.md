@@ -4,6 +4,11 @@
 
 Path tracer en C++ et CUDA. Rendu progressif temps réel avec SDL3.
 
+## Documentation
+
+- [Documentation Doxygen (PDF)](docs/raytracer-doc.pdf)
+- [Documentation Doxygen (HTML)](docs/html/index.html)
+
 ## Build
 
 ```bash
