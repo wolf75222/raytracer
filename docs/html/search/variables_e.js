@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['s_5frenderer_0',['s_renderer',['../gpu__renderer_8cu.html#a932cb3abe7a084456f14a5e658ac2f93',1,'gpu_renderer.cu']]],
+  ['s_5frt_5facc_5fgrid_1',['s_rt_acc_grid',['../gpu__renderer_8cu.html#a6688e80b5942953fb3f8cef4b9d16d8c',1,'gpu_renderer.cu']]],
+  ['s_5frt_5faccum_5fcount_2',['s_rt_accum_count',['../gpu__renderer_8cu.html#a287e9de43dd41d193422f0e9ef8a9fa1',1,'gpu_renderer.cu']]],
+  ['s_5frt_5faccum_5ffb_3',['s_rt_accum_fb',['../gpu__renderer_8cu.html#a9fa8fe269708039392d54ffa3d6f244e',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fargb_4',['s_rt_argb',['../gpu__renderer_8cu.html#a01e84bd8564c899b625409cebc5e0440',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fargb_5fhost_5',['s_rt_argb_host',['../gpu__renderer_8cu.html#a6859f8b7fa2e390c9df534bc2fb36528',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fblock_6',['s_rt_block',['../gpu__renderer_8cu.html#a0565988f4a336b7b47a6260dfca78ee0',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fconfig_5fdone_7',['s_rt_config_done',['../gpu__renderer_8cu.html#a3906e8f655faf5faeec5171b496d22f0',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fframe_5ffb_8',['s_rt_frame_fb',['../gpu__renderer_8cu.html#a0d7425715724074e0efa53d2c17a5a83',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fgrid_9',['s_rt_grid',['../gpu__renderer_8cu.html#ac109a283ddb085a1b8d082454403bcd8',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fh_10',['s_rt_h',['../gpu__renderer_8cu.html#a2423aec7462b6ebe03569d5467a7616a',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fstart_11',['s_rt_start',['../gpu__renderer_8cu.html#a840489cce6f3b8c3b2314307ecdd6aed',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fstop_12',['s_rt_stop',['../gpu__renderer_8cu.html#a270e7577e679653d5b1dc4ea164c33b8',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fstream_13',['s_rt_stream',['../gpu__renderer_8cu.html#a97c986559594967a38533a847a828600',1,'gpu_renderer.cu']]],
+  ['s_5frt_5fw_14',['s_rt_w',['../gpu__renderer_8cu.html#ab8d276ab8f81dbdd16559ef6bd821afe',1,'gpu_renderer.cu']]],
+  ['samples_5fper_5fpixel_15',['samples_per_pixel',['../struct_g_camera.html#ac7975be3926c7aeb5ae4cccd876c6189',1,'GCamera::samples_per_pixel'],['../class_camera.html#adf7924ba329c158ad7111dbb0fd7ea38',1,'Camera::samples_per_pixel']]],
+  ['scale_5f_16',['scale_',['../class_checker.html#aec849ecb6c47ec7e67f69a4a766c0010',1,'Checker']]],
+  ['scene_5f_17',['scene_',['../class_cpu_renderer.html#a133ca43f4c338d03f5352eb14ec8f2c4',1,'CpuRenderer']]],
+  ['second_5fchild_5foffset_18',['second_child_offset',['../struct_flat_b_v_h_node.html#aa97cf6e4226ad44ea291480fb716069f',1,'FlatBVHNode']]],
+  ['sphere_5fidx_19',['sphere_idx',['../struct_g_build_info.html#a63d9c1d05c8ab9afa7edfd2f946b8519',1,'GBuildInfo']]],
+  ['split_5faxis_20',['split_axis',['../struct_g_b_v_h_node.html#ad40a76c419307f5f4bfcc275954c279e',1,'GBVHNode::split_axis'],['../struct_b_v_h_accel_1_1_build_node.html#a36f7457efad980865583ad519b29d96e',1,'BVHAccel::BuildNode::split_axis'],['../struct_flat_b_v_h_node.html#aead241a302ede0474525ef5c629bc701',1,'FlatBVHNode::split_axis']]],
+  ['split_5faxis_5f_21',['split_axis_',['../class_b_v_h_node.html#ab89a399cb59d7352443b88d6fa1421e8',1,'BVHNode']]],
+  ['start_5f_22',['start_',['../class_timer.html#ac55b8d2eeb6707d6d674c93b18985687',1,'Timer']]]
+];

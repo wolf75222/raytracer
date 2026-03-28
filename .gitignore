@@ -30,3 +30,4 @@ enable_ncu.bat
 output/*.csv
 RAPPORT.md
 rapport/
+docs/latex/

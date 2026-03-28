@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['main_0',['main',['../main_8cpp.html#a0ddf1224851353fc92bfbff6f499fa97',1,'main.cpp']]],
+  ['main_2ecpp_1',['main.cpp',['../main_8cpp.html',1,'']]],
+  ['mat_2',['mat',['../struct_g_sphere_so_a.html#acee7f14ff1095682d01de034be043fc9',1,'GSphereSoA']]],
+  ['material_3',['Material',['../class_material.html',1,'']]],
+  ['material_4',['material',['../struct_hit_record.html#a18278816cc6d5d33d8bf811f74c660cf',1,'HitRecord']]],
+  ['material_2ecpp_5',['material.cpp',['../material_8cpp.html',1,'']]],
+  ['material_2ecuh_6',['material.cuh',['../material_8cuh.html',1,'']]],
+  ['material_5f_7',['material_',['../class_sphere.html#ae088a035feae818b01245f8f46cd8c6f',1,'Sphere::material_'],['../class_plane.html#af434720754390af07c92e4581fbd861b',1,'Plane::material_'],['../class_cylinder.html#af3021c754a2234f3152bb158602e620e',1,'Cylinder::material_'],['../class_triangle.html#aef89b3a58346263a68917e05ae6f38ef',1,'Triangle::material_']]],
+  ['material_5fid_8',['material_id',['../struct_g_sphere.html#a87dc6c30ad9b10b4fc46112a09448965',1,'GSphere::material_id'],['../struct_g_plane.html#afe56d0855ccb847cdcab201b3c3d57f6',1,'GPlane::material_id'],['../struct_g_hit_record.html#a2afd2491789c86d6c316c8540ad7e463',1,'GHitRecord::material_id']]],
+  ['materials_5f_9',['materials_',['../class_scene.html#ab7d8a215a05279e095b0345591d59ae6',1,'Scene']]],
+  ['max_10',['max',['../class_interval.html#aa0eecb362f2ea9f4cf63ebd16befc0e3',1,'Interval']]],
+  ['max_5fdepth_11',['max_depth',['../struct_g_camera.html#acd8ca6f7175672dad8e44acba95c884a',1,'GCamera::max_depth'],['../class_camera.html#a2ad66b9f99db0f0ef4f59e4e19633499',1,'Camera::max_depth']]],
+  ['max_5fpoint_12',['max_point',['../class_a_a_b_b.html#a276050837ba460cadcef8b2424786971',1,'AABB']]],
+  ['metal_13',['Metal',['../class_metal.html',1,'Metal'],['../class_metal.html#a217be9e20b822358e3a324e30fa8caef',1,'Metal::Metal()'],['../class_material.html#a9fb7024909b0c590cf497ebb9ff60defaeaa57a9b4248ce3968e718895e1c2f04',1,'Material::Metal']]],
+  ['min_14',['min',['../class_interval.html#a0844343568a6b9872f2d740fe9ea204e',1,'Interval']]],
+  ['min_5fpoint_15',['min_point',['../class_a_a_b_b.html#a2640877b76b1d6e5153904b03a879ca3',1,'AABB']]],
+  ['mn_16',['mn',['../struct_g_a_a_b_b.html#a1a5b2acd3e27cf853f6065b5f6f7f741',1,'GAABB']]],
+  ['mx_17',['mx',['../struct_g_a_a_b_b.html#af70065e93fe0a371736940bd11d7d8d9',1,'GAABB']]]
+];
