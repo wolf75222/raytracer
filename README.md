@@ -36,6 +36,16 @@ raytracer --realtime --scene showcase --width 640 --spp 500
 raytracer --hybrid --gpu-frac 0.7 --scene final --spp 100 --output render.ppm
 ```
 
+## Profilage
+
+```bash
+# Nsight Compute (metriques kernel GPU)
+ncu --set full build/src/Release/raytracer.exe --gpu --scene showcase --width 640 --spp 200 --output ncu_out.ppm
+
+# Nsight Systems (timeline CPU/GPU, transferts, synchro)
+nsys profile --output nsys_out build/src/Release/raytracer.exe --realtime --scene showcase --width 640 --spp 200
+```
+
 ## Scènes
 
 | Scène | Objets | Description |
