@@ -86,7 +86,7 @@ void gpu_realtime_render(const Scene& scene, int width, int height) {
                             // Inverse gamma+ACES pour stocker lineaire dans ImageBuffer
                             screenshot.set_pixel(x, y, Color(r*r, g*g, b*b));
                         }
-                    screenshot.write_ppm(fname);
+                    screenshot.write_ppm_binary(fname);
                     fprintf(stderr, "Screenshot saved: %s\n", fname);
                 }
                 break;

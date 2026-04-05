@@ -49,6 +49,16 @@ private:
     GBVHNode* d_bvh_nodes_ = nullptr;
     float* d_framebuffer_ = nullptr;
 
+    // Persistent RNG states (init once, reused across frames)
+    // Stored as void* to avoid CUDA types in this MSVC-visible header
+    void* d_rng_states_ = nullptr;
+    int rng_states_count_ = 0;
+    int frame_counter_ = 0;
+
+    // Persistent events (avoid create/destroy per frame)
+    void* evt_start_ = nullptr;
+    void* evt_stop_ = nullptr;
+
     int num_spheres_ = 0;
     int num_planes_ = 0;
     int num_materials_ = 0;

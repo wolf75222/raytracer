@@ -24,21 +24,34 @@ __device__ float grng_float(GRng& state) {
 }
 
 __device__ GVec3 random_in_unit_sphere(GRng& rng) {
-    while (true) {
-        GVec3 p(grng_float(rng)*2.0f-1.0f, grng_float(rng)*2.0f-1.0f, grng_float(rng)*2.0f-1.0f);
-        if (p.length_squared() < 1.0f) return p;
-    }
+    // Analytical mapping: no warp divergence (vs rejection loop)
+    float z = 2.0f * grng_float(rng) - 1.0f;
+    float r2 = 1.0f - z * z;
+    float r = sqrtf(fmaxf(0.0f, r2));
+    float phi = 2.0f * 3.14159265f * grng_float(rng);
+    float sinphi, cosphi;
+    sincosf(phi, &sinphi, &cosphi);
+    float scale = cbrtf(grng_float(rng)); // cube root for uniform volume
+    return GVec3(scale * r * cosphi, scale * r * sinphi, scale * z);
 }
 
 __device__ GVec3 random_unit_vector(GRng& rng) {
-    return normalize(random_in_unit_sphere(rng));
+    // Analytical spherical coords: no warp divergence
+    float z = 2.0f * grng_float(rng) - 1.0f;
+    float r = sqrtf(fmaxf(0.0f, 1.0f - z * z));
+    float phi = 2.0f * 3.14159265f * grng_float(rng);
+    float sinphi, cosphi;
+    sincosf(phi, &sinphi, &cosphi);
+    return GVec3(r * cosphi, r * sinphi, z);
 }
 
 __device__ GVec3 random_in_unit_disk(GRng& rng) {
-    while (true) {
-        GVec3 p(grng_float(rng)*2.0f-1.0f, grng_float(rng)*2.0f-1.0f, 0.0f);
-        if (p.length_squared() < 1.0f) return p;
-    }
+    // Analytical polar coords: no warp divergence
+    float r = sqrtf(grng_float(rng));
+    float theta = 2.0f * 3.14159265f * grng_float(rng);
+    float s, c;
+    sincosf(theta, &s, &c);
+    return GVec3(r * c, r * s, 0.0f);
 }
 
 // ============================================================
@@ -132,7 +145,6 @@ __device__ bool trace_bvh(const GBVHNode* __restrict__ nodes, int num_nodes,
             #pragma unroll 4
             for (uint16_t i = 0; i < node.num_prims; i++) {
                 GHitRecord tmp;
-                // SoA: each float[] is contiguous -> coalesced reads
                 if (intersect_sphere_soa(soa, node.data + i, r, t_min, closest, tmp)) {
                     hit_anything = true; closest = tmp.t; rec = tmp;
                 }
@@ -285,14 +297,23 @@ __device__ GVec3 ray_color(GRay r,
 __constant__ char d_camera_bytes[sizeof(GCamera)];
 #define d_camera (*(const GCamera*)d_camera_bytes)
 
-__global__ void render_kernel(float* __restrict__ framebuffer, int width, int height,
+// Init RNG states une seule fois (pas a chaque frame)
+__global__ void init_rng_kernel(curandState* states, int count, unsigned long long seed) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= count) return;
+    curand_init(seed, idx, 0, &states[idx]);
+}
+
+__global__
+void render_kernel(float* __restrict__ framebuffer, int width, int height,
                               const GBVHNode* __restrict__ bvh, int num_bvh,
                               const GSphere* __restrict__ spheres, int num_spheres,
                               const GPlane* __restrict__ planes, int num_planes,
                               const GMaterial* __restrict__ materials,
                               const float* __restrict__ soa_cx, const float* __restrict__ soa_cy,
                               const float* __restrict__ soa_cz, const float* __restrict__ soa_r,
-                              const int* __restrict__ soa_mat) {
+                              const int* __restrict__ soa_mat,
+                              curandState* __restrict__ rng_states, int frame_counter) {
     // Cooperative load of top BVH nodes into shared mem
     __shared__ GBVHNode sh_bvh[BVH_SHARED_NODES];
     int tid_flat = threadIdx.y * blockDim.x + threadIdx.x;
@@ -307,12 +328,25 @@ __global__ void render_kernel(float* __restrict__ framebuffer, int width, int he
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
 
+    int pixel_idx = y * width + x;
+
+    // RNG: persistent si rng_states dispo (realtime), sinon init locale (batch)
     GRng rng;
-    grng_init(rng, y * width + x, 42);
+    if (rng_states) {
+        rng = rng_states[pixel_idx];
+    } else {
+        grng_init(rng, pixel_idx, frame_counter);
+    }
 
     GVec3 pixel_color(0, 0, 0);
     int spp = d_camera.samples_per_pixel;
     float inv_spp = 1.0f / (float)spp;
+
+    // SoA construction: identique pour tous les samples, sort du loop
+    GSphereSoA soa;
+    soa.cx = const_cast<float*>(soa_cx); soa.cy = const_cast<float*>(soa_cy);
+    soa.cz = const_cast<float*>(soa_cz); soa.r = const_cast<float*>(soa_r);
+    soa.mat = const_cast<int*>(soa_mat); soa.count = num_spheres;
 
     for (int s = 0; s < spp; s++) {
         float u_off = grng_float(rng) - 0.5f;
@@ -326,18 +360,16 @@ __global__ void render_kernel(float* __restrict__ framebuffer, int width, int he
             ray_origin = d_camera.origin + pd.x * d_camera.defocus_disk_u + pd.y * d_camera.defocus_disk_v;
         }
         GRay r(ray_origin, pixel_sample - ray_origin);
-        GSphereSoA soa;
-        soa.cx = const_cast<float*>(soa_cx); soa.cy = const_cast<float*>(soa_cy);
-        soa.cz = const_cast<float*>(soa_cz); soa.r = const_cast<float*>(soa_r);
-        soa.mat = const_cast<int*>(soa_mat); soa.count = num_spheres;
         pixel_color += ray_color(r, bvh, num_bvh, soa, spheres, num_spheres, planes, num_planes,
                                  materials, d_camera.max_depth, rng, sh_bvh, sh_count);
     }
 
+    // Write back RNG state pour le realtime (batch: pas besoin)
+    if (rng_states) rng_states[pixel_idx] = rng;
+
     pixel_color *= inv_spp;
 
     // Planar layout (RRR...GGG...BBB): stride-1 writes for coalescing
-    int pixel_idx = y * width + x;
     int total_pixels = width * height;
     // Linear HDR output, gamma/tonemap done later
     framebuffer[pixel_idx]                  = fmaxf(pixel_color.x, 0.0f);
@@ -441,7 +473,13 @@ __global__ void denoise_bilateral_kernel(
 } while(0)
 
 GpuRenderer::GpuRenderer() {}
-GpuRenderer::~GpuRenderer() { free_scene(); free_framebuffer(); }
+GpuRenderer::~GpuRenderer() {
+    free_scene();
+    free_framebuffer();
+    if (d_rng_states_) { cudaFree(d_rng_states_); d_rng_states_ = nullptr; }
+    if (evt_start_) { cudaEventDestroy(static_cast<cudaEvent_t>(evt_start_)); evt_start_ = nullptr; }
+    if (evt_stop_) { cudaEventDestroy(static_cast<cudaEvent_t>(evt_stop_)); evt_stop_ = nullptr; }
+}
 
 void GpuRenderer::free_scene() {
     if (d_spheres_) { cudaFree(d_spheres_); d_spheres_ = nullptr; }
@@ -551,11 +589,41 @@ void GpuRenderer::render(const GCamera& camera, float* h_output, int width, int 
     dim3 grid_size((width + block_size.x - 1) / block_size.x,
                    (height + block_size.y - 1) / block_size.y);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    // Persistent events (crees une seule fois)
+    if (!evt_start_) { cudaEvent_t e; cudaEventCreate(&e); evt_start_ = e; }
+    if (!evt_stop_)  { cudaEvent_t e; cudaEventCreate(&e); evt_stop_ = e; }
+    cudaEvent_t ev_start = static_cast<cudaEvent_t>(evt_start_);
+    cudaEvent_t ev_stop  = static_cast<cudaEvent_t>(evt_stop_);
 
-    cudaEventRecord(start, s_stream);
+    // Persistent RNG states (initialises une seule fois par resolution)
+    int total_pixels = width * height;
+    if (!d_rng_states_ || rng_states_count_ != total_pixels) {
+        if (d_rng_states_) cudaFree(d_rng_states_);
+        curandState* rng_buf = nullptr;
+        cudaMalloc(&rng_buf, total_pixels * sizeof(curandState));
+        d_rng_states_ = rng_buf;
+        rng_states_count_ = total_pixels;
+        int threads = 256;
+        int blocks = (total_pixels + threads - 1) / threads;
+        init_rng_kernel<<<blocks, threads, 0, s_stream>>>(rng_buf, total_pixels, 42ULL);
+        cudaStreamSynchronize(s_stream);
+        frame_counter_ = 0;
+    }
+
+    cudaEventRecord(ev_start, s_stream);
+
+    // Init persistent RNG si pas encore fait
+    int total_px = width * height;
+    if (!d_rng_states_ || rng_states_count_ != total_px) {
+        if (d_rng_states_) cudaFree(d_rng_states_);
+        cudaMalloc(&d_rng_states_, total_px * sizeof(curandState));
+        rng_states_count_ = total_px;
+        dim3 rng_block(256);
+        dim3 rng_grid((total_px + 255) / 256);
+        init_rng_kernel<<<rng_grid, rng_block>>>(
+            static_cast<curandState*>(d_rng_states_), total_px, 42ULL);
+        cudaDeviceSynchronize();
+    }
 
     render_kernel<<<grid_size, block_size, 0, s_stream>>>(
         d_framebuffer_, width, height,
@@ -563,13 +631,14 @@ void GpuRenderer::render(const GCamera& camera, float* h_output, int width, int 
         d_spheres_, num_spheres_,
         d_planes_, num_planes_,
         d_materials_,
-        d_soa_cx_, d_soa_cy_, d_soa_cz_, d_soa_r_, d_soa_mat_
+        d_soa_cx_, d_soa_cy_, d_soa_cz_, d_soa_r_, d_soa_mat_,
+        static_cast<curandState*>(d_rng_states_), frame_counter_
     );
+    frame_counter_++;
 
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
         fprintf(stderr, "Kernel error: %s\n", cudaGetErrorString(err));
-        cudaEventDestroy(start); cudaEventDestroy(stop);
         return;
     }
 
@@ -578,13 +647,11 @@ void GpuRenderer::render(const GCamera& camera, float* h_output, int width, int 
     cudaMemcpyAsync(h_output, d_framebuffer_, width * height * 3 * sizeof(float),
                     cudaMemcpyDeviceToHost, s_stream);
 
-    cudaEventRecord(stop, s_stream);
+    cudaEventRecord(ev_stop, s_stream);
     // Synchroniser le stream (attendre kernel + transfert)
     cudaStreamSynchronize(s_stream);
 
-    cudaEventElapsedTime(&last_ms_, start, stop);
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    cudaEventElapsedTime(&last_ms_, ev_start, ev_stop);
 }
 
 // ============================================================
@@ -722,6 +789,11 @@ static void convert_camera_only(const Camera& cam, GCamera& out) {
 // ============================================================
 struct GBuildInfo { int sphere_idx; GAABB bbox; GVec3 centroid; };
 
+// Host-side bit cast uint32 -> float (device uses __uint_as_float)
+inline float host_uint_as_float(uint32_t v) {
+    float f; memcpy(&f, &v, sizeof(f)); return f;
+}
+
 static void build_gpu_bvh(std::vector<GBuildInfo>& info, int start, int end,
                            std::vector<GBVHNode>& nodes, int num_planes) {
     int my_idx = (int)nodes.size();
@@ -740,11 +812,10 @@ static void build_gpu_bvh(std::vector<GBuildInfo>& info, int start, int end,
 
     int n = end - start;
     if (n <= 4) {
-        // Leaf : stores sphere indices [start, end)
         nodes[my_idx].data = (uint32_t)start;
         nodes[my_idx].num_prims = (uint16_t)n;
         nodes[my_idx].split_axis = 0;
-        nodes[my_idx].prim_type = 0; // spheres
+        nodes[my_idx].prim_type = 0;
         return;
     }
 
@@ -772,7 +843,7 @@ static void build_gpu_bvh(std::vector<GBuildInfo>& info, int start, int end,
     int mid = start + n / 2;
 
     nodes[my_idx].split_axis = (uint8_t)axis;
-    nodes[my_idx].num_prims = 0; // interior
+    nodes[my_idx].num_prims = 0;
     nodes[my_idx].prim_type = 0;
 
     // Left child (immediately after)
@@ -844,16 +915,15 @@ void gpu_render_scene(const Scene& scene, ImageBuffer& image, float& kernel_ms) 
     s_renderer->render(gcam, s_fb, w, h);
     kernel_ms = s_renderer->last_render_ms();
 
-    // Copie rapide vers ImageBuffer
+    // Copie directe planar -> AoS via data()
     int total_px = w * h;
-    for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++) {
-            int px = y * w + x;
-            image.set_pixel(x, y, Color(
-                fminf(s_fb[px], 1.0f),
-                fminf(s_fb[px + total_px], 1.0f),
-                fminf(s_fb[px + total_px*2], 1.0f)));
-        }
+    Color* dst = image.data();
+    for (int i = 0; i < total_px; i++) {
+        dst[i] = Color(
+            fminf(s_fb[i], 1.0f),
+            fminf(s_fb[i + total_px], 1.0f),
+            fminf(s_fb[i + total_px*2], 1.0f));
+    }
 }
 
 // ============================================================
@@ -880,25 +950,28 @@ void gpu_render_scene_denoised(const Scene& scene, ImageBuffer& image,
     // Denoise sur le d_framebuffer_ du renderer (deja sur GPU)
     dim3 block(16, 16);
     dim3 grid((w+15)/16, (h+15)/16);
-    denoise_bilateral_kernel<<<grid, block>>>(
+    // Utiliser le stream persistant au lieu de cudaDeviceSynchronize
+    static cudaStream_t s_denoise_stream = nullptr;
+    if (!s_denoise_stream) cudaStreamCreate(&s_denoise_stream);
+
+    denoise_bilateral_kernel<<<grid, block, 0, s_denoise_stream>>>(
         s_renderer->d_framebuffer_, d_denoise_buf, w, h, sigma_color);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(s_denoise_stream);
 
     // Copier le resultat denoise vers host (pinned)
     float* h_buf = nullptr;
     cudaMallocHost(&h_buf, fb_bytes);
     cudaMemcpy(h_buf, d_denoise_buf, fb_bytes, cudaMemcpyDeviceToHost);
 
-    // Ecrire dans l'ImageBuffer
+    // Copie directe planar -> AoS
     int tp = w * h;
-    for (int y = 0; y < h; y++)
-        for (int x = 0; x < w; x++) {
-            int px = y * w + x;
-            image.set_pixel(x, y, Color(
-                fminf(h_buf[px], 1.0f),
-                fminf(h_buf[px+tp], 1.0f),
-                fminf(h_buf[px+tp*2], 1.0f)));
-        }
+    Color* dst = image.data();
+    for (int i = 0; i < tp; i++) {
+        dst[i] = Color(
+            fminf(h_buf[i], 1.0f),
+            fminf(h_buf[i+tp], 1.0f),
+            fminf(h_buf[i+tp*2], 1.0f));
+    }
     cudaFreeHost(h_buf);
 }
 
@@ -913,6 +986,9 @@ static unsigned char* s_rt_argb_host = nullptr; // pinned host buffer
 static int s_rt_w = 0, s_rt_h = 0;
 static int s_rt_accum_count = 0;
 static cudaStream_t s_rt_stream = nullptr;
+static curandState* s_rt_rng_states = nullptr;
+static int s_rt_rng_count = 0;
+static int s_rt_frame_counter = 0;
 
 void gpu_realtime_init(const Scene& scene, int width, int height) {
     s_rt_w = width; s_rt_h = height;
@@ -930,8 +1006,20 @@ void gpu_realtime_init(const Scene& scene, int width, int height) {
     cudaMallocHost(&s_rt_argb_host, px * 4);
     cudaMemset(s_rt_accum_fb, 0, fb_bytes);
     s_rt_accum_count = 0;
+    s_rt_frame_counter = 0;
 
     if (!s_rt_stream) cudaStreamCreate(&s_rt_stream);
+
+    // Persistent RNG states pour realtime
+    if (!s_rt_rng_states || s_rt_rng_count != (int)px) {
+        if (s_rt_rng_states) cudaFree(s_rt_rng_states);
+        cudaMalloc(&s_rt_rng_states, px * sizeof(curandState));
+        s_rt_rng_count = (int)px;
+        int threads = 256;
+        int blocks = ((int)px + threads - 1) / threads;
+        init_rng_kernel<<<blocks, threads, 0, s_rt_stream>>>(s_rt_rng_states, (int)px, 42ULL);
+        cudaStreamSynchronize(s_rt_stream);
+    }
 
     // Force scene upload
     ImageBuffer dummy(width, height);
@@ -979,7 +1067,8 @@ float gpu_realtime_render_frame(const Scene& scene) {
         s_renderer->d_planes_, s_renderer->num_planes_,
         s_renderer->d_materials_,
         s_renderer->d_soa_cx_, s_renderer->d_soa_cy_,
-        s_renderer->d_soa_cz_, s_renderer->d_soa_r_, s_renderer->d_soa_mat_);
+        s_renderer->d_soa_cz_, s_renderer->d_soa_r_, s_renderer->d_soa_mat_,
+        s_rt_rng_states, s_rt_frame_counter);
 
     accumulate_kernel<<<s_rt_acc_grid, 256, 0, s_rt_stream>>>(
         s_rt_frame_fb, s_rt_accum_fb, s_rt_w * s_rt_h);
@@ -987,6 +1076,7 @@ float gpu_realtime_render_frame(const Scene& scene) {
     cudaEventRecord(s_rt_stop, s_rt_stream);
     // PAS de cudaStreamSynchronize ici - le tonemap synchronisera
     s_rt_accum_count++;
+    s_rt_frame_counter++;
 
     float ms = 0;
     cudaEventSynchronize(s_rt_stop);
@@ -1013,4 +1103,5 @@ void gpu_realtime_reset_accum() {
     if (s_rt_accum_fb)
         cudaMemset(s_rt_accum_fb, 0, s_rt_w * s_rt_h * 3 * sizeof(float));
     s_rt_accum_count = 0;
+    s_rt_frame_counter = 0;
 }

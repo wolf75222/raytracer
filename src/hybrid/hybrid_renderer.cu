@@ -1,7 +1,5 @@
 // Hybrid CPU+GPU renderer avec work stealing par tuiles
-// Le GPU rend un batch de tuiles (la fraction haute de l'image)
-// Le CPU rend les tuiles restantes en multi-thread
-// Les deux travaillent en parallele
+// Le GPU rend la partie haute, le CPU la partie basse, en parallele
 
 #include "hybrid/hybrid_renderer.h"
 #include "gpu/gpu_renderer.h"
@@ -19,6 +17,8 @@
 #include <vector>
 #include <cmath>
 
+static float s_adaptive_fraction = -1.0f;
+
 void hybrid_render_scene(const Scene& scene, ImageBuffer& image,
                          float gpu_fraction,
                          float& cpu_time_ms, float& gpu_time_ms) {
@@ -26,49 +26,52 @@ void hybrid_render_scene(const Scene& scene, ImageBuffer& image,
     int h = image.height();
     constexpr int TILE_SIZE = 32;
 
+    // Auto-balancing apres la premiere frame (reset si fraction change)
+    static float s_last_requested = -1.0f;
+    if (s_last_requested >= 0.0f && std::fabs(gpu_fraction - s_last_requested) > 0.1f)
+        s_adaptive_fraction = -1.0f;
+    s_last_requested = gpu_fraction;
+    if (s_adaptive_fraction > 0.0f)
+        gpu_fraction = s_adaptive_fraction;
+
     int tiles_x = (w + TILE_SIZE - 1) / TILE_SIZE;
     int tiles_y = (h + TILE_SIZE - 1) / TILE_SIZE;
     int total_tiles = tiles_x * tiles_y;
 
-    // Repartition : GPU prend les premieres tuiles, CPU le reste
     int gpu_tiles = (int)(total_tiles * gpu_fraction);
     if (gpu_tiles < 0) gpu_tiles = 0;
     if (gpu_tiles > total_tiles) gpu_tiles = total_tiles;
     int cpu_start_tile = gpu_tiles;
 
-    // Calcul des lignes GPU (tuiles completes depuis le haut)
     int gpu_rows = 0;
     if (gpu_tiles > 0) {
         int gpu_tile_rows = (gpu_tiles + tiles_x - 1) / tiles_x;
         gpu_rows = gpu_tile_rows * TILE_SIZE;
         if (gpu_rows > h) gpu_rows = h;
-        gpu_tiles = gpu_tile_rows * tiles_x; // ajuster au nombre reel
+        gpu_tiles = gpu_tile_rows * tiles_x;
         cpu_start_tile = gpu_tiles;
     }
 
     fprintf(stderr, "Hybrid: GPU %d tuiles (lignes 0-%d), CPU %d tuiles (lignes %d-%d), total %d\n",
             gpu_tiles, gpu_rows, total_tiles - cpu_start_tile, gpu_rows, h, total_tiles);
 
-    // --- GPU thread : rend la partie haute ---
+    // --- GPU thread : rend dans un buffer separe ---
     std::thread gpu_thread;
     float gpu_kernel_ms = 0;
+    ImageBuffer gpu_image(w, h); // buffer separe, pas de race
 
     if (gpu_rows > 0) {
         gpu_thread = std::thread([&]() {
             auto t0 = std::chrono::high_resolution_clock::now();
-
-            // GPU rend toute l'image (plus simple que de modifier le kernel)
-            // On ne copie que les lignes GPU dans l'ImageBuffer
             float km = 0;
-            gpu_render_scene(scene, image, km);
+            gpu_render_scene(scene, gpu_image, km);
             gpu_kernel_ms = km;
-
             auto t1 = std::chrono::high_resolution_clock::now();
             gpu_time_ms = (float)std::chrono::duration<double, std::milli>(t1 - t0).count();
         });
     }
 
-    // --- CPU : rend les tuiles restantes avec work stealing ---
+    // --- CPU : rend uniquement ses tuiles ---
     if (cpu_start_tile < total_tiles) {
         auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -110,6 +113,26 @@ void hybrid_render_scene(const Scene& scene, ImageBuffer& image,
 
     if (gpu_thread.joinable())
         gpu_thread.join();
+
+    // Copie GPU -> image (seulement les lignes GPU, apres join = pas de race)
+    if (gpu_rows > 0) {
+        const Color* gpu_data = gpu_image.data();
+        Color* dst = image.data();
+        for (int y = 0; y < gpu_rows; y++)
+            for (int x = 0; x < w; x++)
+                dst[y * w + x] = gpu_data[y * w + x];
+    }
+
+    // Auto-balancing pour les prochains appels
+    if (gpu_rows > 0 && gpu_rows < h && cpu_time_ms > 0 && gpu_time_ms > 0) {
+        float gpu_pix_per_ms = (float)(w * gpu_rows) / gpu_time_ms;
+        float cpu_pix_per_ms = (float)(w * (h - gpu_rows)) / cpu_time_ms;
+        float optimal = gpu_pix_per_ms / (gpu_pix_per_ms + cpu_pix_per_ms);
+        if (s_adaptive_fraction < 0.0f)
+            s_adaptive_fraction = optimal;
+        else
+            s_adaptive_fraction = 0.7f * s_adaptive_fraction + 0.3f * optimal;
+    }
 
     fprintf(stderr, "Hybrid: CPU %.1fms, GPU kernel %.1fms (total GPU %.1fms)\n",
             cpu_time_ms, gpu_kernel_ms, gpu_time_ms);

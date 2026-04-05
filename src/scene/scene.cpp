@@ -1,6 +1,7 @@
 #include "scene/scene.h"
 #include "math/random.cuh"
 #include <cmath>
+#include <random>
 
 // ============================================================
 // Scene "three_spheres" : 3 materiaux sur sol gris
@@ -45,6 +46,11 @@ Scene Scene::build_three_spheres() {
 Scene Scene::build_final_scene() {
     Scene scene;
 
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    auto rnd = [&]() { return dist(gen); };
+    auto rnd_range = [&](double lo, double hi) { return lo + (hi - lo) * dist(gen); };
+
     auto* ground = scene.add_material<Lambertian>(Color(0.5, 0.5, 0.48));
     scene.world.add(std::make_shared<Plane>(Point3(0, 0, 0), Vec3(0, 1, 0), ground));
 
@@ -61,20 +67,20 @@ Scene Scene::build_final_scene() {
             double angle = 2.0 * 3.14159265 * i / count + ring * 0.3;
             double x = radius * std::cos(angle);
             double z = radius * std::sin(angle);
-            double r = 0.15 + random_double() * 0.15;
-            double y = r + random_double() * 0.1 * ring;
+            double r = 0.15 + rnd() * 0.15;
+            double y = r + rnd() * 0.1 * ring;
 
-            double choose = random_double();
+            double choose = rnd();
             if (choose < 0.5) {
-                Color c(random_double(0.15, 0.85), random_double(0.15, 0.85), random_double(0.15, 0.85));
+                Color c(rnd_range(0.15, 0.85), rnd_range(0.15, 0.85), rnd_range(0.15, 0.85));
                 auto* mat = scene.add_material<Lambertian>(c);
                 scene.world.add(std::make_shared<Sphere>(Point3(x, y, z), r, mat));
             } else if (choose < 0.82) {
-                Color c(random_double(0.5, 1.0), random_double(0.5, 1.0), random_double(0.5, 1.0));
-                auto* mat = scene.add_material<Metal>(c, random_double(0.0, 0.35));
+                Color c(rnd_range(0.5, 1.0), rnd_range(0.5, 1.0), rnd_range(0.5, 1.0));
+                auto* mat = scene.add_material<Metal>(c, rnd_range(0.0, 0.35));
                 scene.world.add(std::make_shared<Sphere>(Point3(x, y, z), r, mat));
             } else {
-                auto* mat = scene.add_material<Dielectric>(1.4 + random_double() * 0.3);
+                auto* mat = scene.add_material<Dielectric>(1.4 + rnd() * 0.3);
                 scene.world.add(std::make_shared<Sphere>(Point3(x, y, z), r, mat));
             }
         }
@@ -297,6 +303,16 @@ Scene Scene::build_hall() {
 // ============================================================
 Scene Scene::build_galaxy() {
     Scene scene;
+
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    auto rnd = [&]() { return dist(gen); };
+    auto rnd_range = [&](double lo, double hi) { return lo + (hi - lo) * dist(gen); };
+    auto rnd_vec3 = [&]() { return Vec3(rnd(), rnd(), rnd()); };
+    auto rnd_vec3_range = [&](double lo, double hi) {
+        return Vec3(rnd_range(lo, hi), rnd_range(lo, hi), rnd_range(lo, hi));
+    };
+
     auto* mat_ground = scene.add_material<Checker>(Color(0.1, 0.1, 0.15), Color(0.05, 0.05, 0.08), 3.0);
     scene.world.add(std::make_shared<Plane>(Point3(0, 0, 0), Vec3(0, 1, 0), mat_ground));
 
@@ -304,13 +320,13 @@ Scene Scene::build_galaxy() {
         double arm_off = arm * 3.14159265 / 2.0;
         for (int i = 0; i < 250; i++) {
             double t = i * 0.04, r = 1.0 + t * 2.5, angle = t * 2.5 + arm_off;
-            double x = r * std::cos(angle) + random_double(-0.3, 0.3);
-            double z = r * std::sin(angle) + random_double(-0.3, 0.3);
-            double y = 0.1 + random_double(0.0, 0.3), radius = 0.08 + random_double(0.0, 0.12);
-            double mc = random_double();
+            double x = r * std::cos(angle) + rnd_range(-0.3, 0.3);
+            double z = r * std::sin(angle) + rnd_range(-0.3, 0.3);
+            double y = 0.1 + rnd_range(0.0, 0.3), radius = 0.08 + rnd_range(0.0, 0.12);
+            double mc = rnd();
             const Material* mat;
-            if (mc < 0.5) mat = scene.add_material<Lambertian>(random_vec3() * random_vec3());
-            else if (mc < 0.8) mat = scene.add_material<Metal>(random_vec3(0.5, 1.0), random_double(0, 0.3));
+            if (mc < 0.5) mat = scene.add_material<Lambertian>(rnd_vec3() * rnd_vec3());
+            else if (mc < 0.8) mat = scene.add_material<Metal>(rnd_vec3_range(0.5, 1.0), rnd_range(0, 0.3));
             else mat = scene.add_material<Dielectric>(1.5);
             scene.world.add(std::make_shared<Sphere>(Point3(x, y, z), radius, mat));
         }

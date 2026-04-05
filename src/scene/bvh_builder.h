@@ -18,6 +18,7 @@ public:
 private:
     std::vector<FlatBVHNode> nodes_;
     std::vector<std::shared_ptr<Hittable>> ordered_prims_;
+    std::vector<std::shared_ptr<Hittable>> unbounded_prims_;  // Planes (infinite, no BVH)
 
     struct BuildPrimInfo {
         size_t prim_index;

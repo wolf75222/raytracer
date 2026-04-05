@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         auto end = std::chrono::high_resolution_clock::now();
         double elapsed = std::chrono::duration<double>(end - start).count();
         std::cerr << "Total: " << elapsed << "s\n";
-        image.write_ppm(output_file);
+        image.write_ppm_binary(output_file);
         std::cerr << "Saved to: " << output_file << "\n";
         return 0;
     }
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
         double elapsed = std::chrono::duration<double>(end - start).count();
         std::cerr << "GPU kernel: " << kernel_ms << " ms\n";
         std::cerr << "Total (incl. transfer): " << elapsed << "s\n";
-        image.write_ppm(output_file);
+        image.write_ppm_binary(output_file);
         std::cerr << "Saved to: " << output_file << "\n";
         return 0;
     }
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Denoising...\n";
         denoise_bilateral(image, 3, 0.1);
     }
-    image.write_ppm(output_file);
+    image.write_ppm_binary(output_file);
     std::cerr << "Saved to: " << output_file << "\n";
 
     return 0;

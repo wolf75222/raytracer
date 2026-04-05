@@ -155,14 +155,14 @@ struct GHitRecord {
 };
 
 // ============================================================
-// GPU Flat BVH Node
+// GPU Flat BVH Node (40 bytes, GAABB aligned 16B for coalesced loads)
 // ============================================================
 struct GBVHNode {
-    GAABB bbox;
-    uint32_t data;        // leaf: primitives_offset | interior: second_child_offset
-    uint16_t num_prims;   // 0 = interior
-    uint8_t split_axis;
-    uint8_t prim_type;    // 0 = sphere, 1 = plane (for leaves)
+    GAABB bbox;           // 32 bytes (2 x GVec3 aligned 16)
+    uint32_t data;        // 4 bytes: leaf: primitives_offset | interior: second_child_offset
+    uint16_t num_prims;   // 2 bytes: 0 = interior
+    uint8_t split_axis;   // 1 byte
+    uint8_t prim_type;    // 1 byte: 0 = sphere, 1 = plane
 };
 
 // ============================================================

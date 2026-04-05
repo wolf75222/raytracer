@@ -9,7 +9,18 @@
 // ============================================================
 
 BVHAccel::BVHAccel(const HittableList& list) {
-    auto prims = list.objects();
+    auto all_prims = list.objects();
+    if (all_prims.empty()) return;
+
+    // Separate planes (infinite geometry) from bounded primitives
+    std::vector<std::shared_ptr<Hittable>> prims;
+    for (auto& p : all_prims) {
+        if (dynamic_cast<Plane*>(p.get()))
+            unbounded_prims_.push_back(p);
+        else
+            prims.push_back(p);
+    }
+
     if (prims.empty()) return;
 
     // Build primitive info
@@ -201,10 +212,18 @@ void BVHAccel::delete_tree(BuildNode* node) {
 }
 
 bool BVHAccel::hit(const Ray& r, Interval ray_t, HitRecord& rec) const {
-    if (nodes_.empty()) return false;
-
     bool hit_anything = false;
     double closest = ray_t.max;
+
+    // Brute-force test unbounded primitives (planes)
+    for (const auto& prim : unbounded_prims_) {
+        if (prim->hit(r, Interval(ray_t.min, closest), rec)) {
+            hit_anything = true;
+            closest = rec.t;
+        }
+    }
+
+    if (nodes_.empty()) return hit_anything;
 
     // Iterative traversal with explicit stack
     constexpr int MAX_STACK = 64;

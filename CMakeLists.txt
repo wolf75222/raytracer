@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 project(raytracer LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -10,11 +15,14 @@ option(ENABLE_CUDA "Build CUDA GPU renderer" OFF)
 
 if(ENABLE_CUDA)
     enable_language(CUDA)
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES "86")
+    endif()
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
-option(ENABLE_REALTIME "Build real-time viewer (requires SDL2)" ON)
+option(ENABLE_REALTIME "Build real-time viewer (requires SDL3)" ON)
 
 if(ENABLE_REALTIME)
     include(FetchContent)

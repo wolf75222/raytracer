@@ -15,6 +15,8 @@ public:
 
     void set_pixel(int x, int y, const Color& color);
     Color get_pixel(int x, int y) const;
+    Color* data() { return pixels_.data(); }
+    const Color* data() const { return pixels_.data(); }
 
     // Write PPM P3 (text) format
     void write_ppm(std::ostream& out) const;
